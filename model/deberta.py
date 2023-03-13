@@ -1413,6 +1413,8 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
 
     def forward(
         self,
+        video=None,
+        video_mask=None,
         input_ids=None,
         attention_mask=None,
         token_type_ids=None,
@@ -1421,8 +1423,6 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
         labels=None,
         output_attentions=None,
         return_dict=None,
-        video=None,
-        video_mask=None,
         mlm=False,
     ):
         r"""
