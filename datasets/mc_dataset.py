@@ -4,6 +4,8 @@ from torch.utils.data.dataloader import default_collate
 import pandas as pd
 import pickle
 import math
+from pathlib import Path
+import numpy as np
 
 
 class MC_Dataset(Dataset):
@@ -21,11 +23,13 @@ class MC_Dataset(Dataset):
         suffix="",
     ):
         self.data = pd.read_csv(csv_path)
+        self.data.fillna({'a0': '', 'a1': '', 'a2': '', 'a3': '', 'a4': ''}, inplace=True)
+
         if subtitles_path:
             self.subs = pickle.load(open(subtitles_path, "rb"))
         else:
             self.subs = None
-        self.features = th.load(features_path)
+        self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
         self.max_feats = max_feats
         self.features_dim = features_dim
         self.mask = tokenizer.mask_token if tokenizer is not None else None
@@ -60,30 +64,45 @@ class MC_Dataset(Dataset):
         return text
 
     def _get_video(self, video_id, start, end):
-        if video_id not in self.features:
-            print(video_id)
-            video = th.zeros(1, self.features_dim)
+        if start is not None and not math.isnan(start):
+            start = int(start)
+            end = int(end)
         else:
-            if start is not None and not math.isnan(start):
-                video = self.features[video_id][int(start) : int(end) + 1].float()
-            else:
-                video = self.features[video_id].float()
-            if not len(video):
-                print(video_id, start, end)
-                video = th.zeros(1, self.features_dim)
-        if len(video) > self.max_feats:
-            sampled = []
-            for j in range(self.max_feats):
-                sampled.append(video[(j * len(video)) // self.max_feats])
-            video = th.stack(sampled)
-            video_len = self.max_feats
-        elif len(video) < self.max_feats:
-            video_len = len(video)
-            video = th.cat(
-                [video, th.zeros(self.max_feats - video_len, self.features_dim)], 0
-            )
+            raise NotImplementedError
+
+        features_not_loaded = False
+        frame_features = []
+        video_id = '_'.join(video_id.split('_')[:-2])
+        for i in range(start, end):
+            feature_path = self.features_dir / f'{video_id}_o_{i}.npz'
+            if not feature_path.exists():
+                features_not_loaded = True
+                print(f'Feature {feature_path} not found, needed ({start}, {end})')
+                break
+            try:
+                with np.load(feature_path, allow_pickle=True) as data:
+                    features = th.tensor(data['embeddings'])
+                    frame_features.append(features)
+            except:
+                features_not_loaded = True
+                print(f'Feature {feature_path} not loaded, needed ({start}, {end})')
+                break
+
+        if features_not_loaded:
+            print("Using zero features")
+            video_len = 1
+            video = th.zeros(self.max_feats, self.features_dim)
         else:
-            video_len = self.max_feats
+            if len(frame_features) > self.max_feats:
+                # sample frames
+                frame_idxs = np.linspace(0, len(frame_features) - 1, self.max_feats)
+                frame_idxs = np.round(frame_idxs).astype(int)
+                frame_features = [frame_features[i] for i in frame_idxs]
+
+            video_len = len(frame_features)
+            for i in range(len(frame_features), self.max_feats):
+                frame_features.append(th.zeros(self.features_dim))
+            video = th.stack(frame_features)
 
         return video, video_len
 
