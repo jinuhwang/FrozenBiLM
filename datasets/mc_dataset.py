@@ -11,86 +11,11 @@ import os
 import torch
 import time
 
-def add_noise_for_similarity(embedding, target_similarity):
-    """
-    Add noise to an embedding to achieve a specific target cosine similarity.
-    
-    Parameters:
-    - embedding (torch.Tensor): The original embedding vector of shape (d,).
-    - target_similarity (float): The desired cosine similarity after adding noise.
+import sys
+if '/workspace' not in sys.path:
+    sys.path.insert(0, '/workspace')
+from vgenie.utils import add_noise_for_similarity, add_noise_for_mse
 
-    Returns:
-    - noisy_vector (torch.Tensor): The noisy vector of shape (d,).
-    """
-    # Save current RNG state
-    current_rng_state = torch.get_rng_state()
-
-    some_seed_value = int(time.time())
-
-    # Manually set RNG state for this operation
-    torch.manual_seed(some_seed_value)  # some_seed_value can be based on time, iteration number, etc.
-    
-    v_norm = embedding / torch.norm(embedding)
-    # Generate a random vector of the same size
-    r = torch.randn_like(v_norm)
-
-    # Orthogonalize the random vector with respect to the original vector
-    r_ortho = r - torch.dot(r, v_norm) * v_norm
-
-    # Normalize the orthogonal random vector
-    r_norm = r_ortho / torch.norm(r_ortho)
-
-    target_similarity = torch.tensor(target_similarity)
-    # Calculate epsilon for the desired degradation in similarity
-    epsilon = torch.sqrt(2 * (1 - target_similarity))
-
-    # Construct the noisy vector
-    v_noisy = v_norm + epsilon * r_norm
-
-    # Normalize the noisy vector
-    v_noisy_norm = v_noisy / torch.norm(v_noisy)
-
-    # Restore the previous RNG state
-    torch.set_rng_state(current_rng_state)
-
-    return v_noisy_norm
-
-def add_noise_for_mse(embedding, target_mse):
-    """
-    Adds noise to the input embedding to achieve the given target MSE.
-
-    Args:
-    - embedding (torch.Tensor): The input embedding to which noise will be added.
-    - target_mse (float): The desired mean squared error between the original and noisy embeddings.
-
-    Returns:
-    - noisy_embedding (torch.Tensor): The resulting noisy embedding.
-    """
-    # Save current RNG state
-    current_rng_state = torch.get_rng_state()
-
-    some_seed_value = int(time.time())
-
-    # Manually set RNG state for this operation
-    torch.manual_seed(some_seed_value)  # some_seed_value can be based on time, iteration number, etc.
-    
-    # Generate a random vector of the same size as the embedding
-    noise = torch.randn_like(embedding)
-
-    target_mse = torch.tensor(target_mse)
-    # Calculate the required magnitude of the noise
-    noise_magnitude = torch.sqrt(target_mse * embedding.numel())
-
-    # Normalize the noise to have the desired magnitude
-    normalized_noise = noise / torch.norm(noise) * noise_magnitude
-
-    # Add the normalized noise to the embedding
-    noisy_embedding = embedding + normalized_noise
-
-    # Restore the previous RNG state
-    torch.set_rng_state(current_rng_state)
-
-    return noisy_embedding
 
 class MC_Dataset(Dataset):
     def __init__(
