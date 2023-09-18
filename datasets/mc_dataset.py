@@ -55,6 +55,43 @@ def add_noise_for_similarity(embedding, target_similarity):
 
     return v_noisy_norm
 
+def add_noise_for_mse(embedding, target_mse):
+    """
+    Adds noise to the input embedding to achieve the given target MSE.
+
+    Args:
+    - embedding (torch.Tensor): The input embedding to which noise will be added.
+    - target_mse (float): The desired mean squared error between the original and noisy embeddings.
+
+    Returns:
+    - noisy_embedding (torch.Tensor): The resulting noisy embedding.
+    """
+    # Save current RNG state
+    current_rng_state = torch.get_rng_state()
+
+    some_seed_value = int(time.time())
+
+    # Manually set RNG state for this operation
+    torch.manual_seed(some_seed_value)  # some_seed_value can be based on time, iteration number, etc.
+    
+    # Generate a random vector of the same size as the embedding
+    noise = torch.randn_like(embedding)
+
+    target_mse = torch.tensor(target_mse)
+    # Calculate the required magnitude of the noise
+    noise_magnitude = torch.sqrt(target_mse * embedding.numel())
+
+    # Normalize the noise to have the desired magnitude
+    normalized_noise = noise / torch.norm(noise) * noise_magnitude
+
+    # Add the normalized noise to the embedding
+    noisy_embedding = embedding + normalized_noise
+
+    # Restore the previous RNG state
+    torch.set_rng_state(current_rng_state)
+
+    return noisy_embedding
+
 class MC_Dataset(Dataset):
     def __init__(
         self,
@@ -134,7 +171,10 @@ class MC_Dataset(Dataset):
                     noise_level = os.environ.get('INJECT_NOISE', None)
                     if noise_level is not None:
                         noise_level = float(noise_level)
-                        features = add_noise_for_similarity(features, noise_level)
+                        if os.environ.get('INJECT_NOISE_MSE', None) is not None:
+                            features = add_noise_for_mse(features, noise_level)
+                        else:
+                            features = add_noise_for_similarity(features, noise_level)
                     frame_features.append(features)
             except Exception as e:
                 features_not_loaded = True
