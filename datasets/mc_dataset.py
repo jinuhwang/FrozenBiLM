@@ -38,7 +38,9 @@ class MC_Dataset(Dataset):
             self.subs = pickle.load(open(subtitles_path, "rb"))
         else:
             self.subs = None
-        self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
+        # self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
+        # self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
+        self.features_dir = Path(features_path) 
         self.max_feats = max_feats
         self.features_dim = features_dim
         self.mask = tokenizer.mask_token if tokenizer is not None else None
@@ -92,15 +94,15 @@ class MC_Dataset(Dataset):
                 with np.load(feature_path, allow_pickle=True) as data:
                     features = th.tensor(data['embeddings'])
 
-                    # For noise injection
-                    noise_level = os.environ.get('INJECT_NOISE', None)
-                    if noise_level is not None:
-                        noise_level = float(noise_level)
-                        if os.environ.get('INJECT_NOISE_MSE', None) is not None:
-                            features = add_noise_for_mse(features, noise_level)
-                        else:
-                            features = add_noise_for_similarity(features, noise_level)
-                    frame_features.append(features)
+                # For noise injection
+                noise_level = os.environ.get('INJECT_NOISE', None)
+                if noise_level is not None:
+                    noise_level = float(noise_level)
+                    if os.environ.get('INJECT_NOISE_MSE', None) is not None:
+                        features = add_noise_for_mse(features, noise_level)
+                    else:
+                        features = add_noise_for_similarity(features, noise_level)
+                frame_features.append(features)
             except Exception as e:
                 features_not_loaded = True
                 print(f'Feature {feature_path} not loaded, needed ({start}, {end}): {e}')
