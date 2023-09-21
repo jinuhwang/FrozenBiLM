@@ -15,6 +15,7 @@ import sys
 if '/workspace' not in sys.path:
     sys.path.insert(0, '/workspace')
 from vgenie.utils import add_noise_for_similarity, add_noise_for_mse
+from vgenie.dataset.utils import load_embedding
 
 
 class MC_Dataset(Dataset):
@@ -81,19 +82,12 @@ class MC_Dataset(Dataset):
         else:
             raise NotImplementedError
 
-        features_not_loaded = False
         frame_features = []
         video_id = '_'.join(video_id.split('_')[:-2])
         for i in range(start, end):
             feature_path = self.features_dir / f'{video_id}_o_{i}.npz'
-            if not feature_path.exists():
-                features_not_loaded = True
-                print(f'Feature {feature_path} not found, needed ({start}, {end})')
-                break
             try:
-                with np.load(feature_path, allow_pickle=True) as data:
-                    features = th.tensor(data['embeddings'])
-
+                features = load_embedding(feature_path, return_pt=True)
                 # For noise injection
                 noise_level = os.environ.get('INJECT_NOISE', None)
                 if noise_level is not None:
@@ -104,25 +98,25 @@ class MC_Dataset(Dataset):
                         features = add_noise_for_similarity(features, noise_level)
                 frame_features.append(features)
             except Exception as e:
-                features_not_loaded = True
                 print(f'Feature {feature_path} not loaded, needed ({start}, {end}): {e}')
                 break
 
-        if features_not_loaded:
-            print("Using zero features")
-            video_len = 1
-            video = th.zeros(self.max_feats, self.features_dim)
-        else:
-            if len(frame_features) > self.max_feats:
-                # sample frames
-                frame_idxs = np.linspace(0, len(frame_features) - 1, self.max_feats)
-                frame_idxs = np.round(frame_idxs).astype(int)
-                frame_features = [frame_features[i] for i in frame_idxs]
+        if len(frame_features) > self.max_feats:
+            # sample frames
+            # frame_idxs = np.linspace(0, len(frame_features) - 1, self.max_feats)
+            # frame_idxs = np.round(frame_idxs).astype(int)
+            # frame_features = [frame_features[i] for i in frame_idxs]
+            step = len(frame_features) // self.max_feats
+            tmp = []
+            for j in range(self.max_feats):
+                tmp.append(frame_features[j * step])
+            frame_features = tmp
 
-            video_len = len(frame_features)
-            for i in range(len(frame_features), self.max_feats):
-                frame_features.append(th.zeros(self.features_dim))
-            video = th.stack(frame_features)
+        video_len = len(frame_features)
+        for i in range(video_len, self.max_feats):
+            # Fill the rest with zeros
+            frame_features.append(th.zeros(self.features_dim))
+        video = th.stack(frame_features)
 
         return video, video_len
 
