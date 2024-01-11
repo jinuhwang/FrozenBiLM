@@ -1,7 +1,17 @@
 ##!/bin/bash
 
-# TRANSFORMERS_CACHE=/workspace/ssd/cache \
+    # Original accuracy
     # --how2qa_features_path /mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14 \
+
+    # No visual features
+    # --how2qa_features_path /dev/null \
+
+    # DiffRate Only
+    # --how2qa_features_path /mnt/ssd2/dataset/how2qa/diffrate/openai_clip-vit-large-patch14/p_257_256_252_244_241_237_233_230_225_222_220_200_155_105_81_65_60_56_52_50_49_48_33_5_m_257_253_247_241_240_235_231_228_223_222_216_181_122_87_65_62_56_54_50_49_48_47_25_5 \
+
+    # Reues Only
+    # --how2qa_features_path /mnt/ssd2/dataset/how2qa/reuse/openai_clip-vit-large-patch14/try23 \
+
 TRANSFORMERS_CACHE=microsoft \
 python \
     -m torch.distributed.launch --nproc_per_node 4 --use_env \
@@ -9,9 +19,9 @@ python \
     --test --eval \
     --combine_datasets how2qa \
     --combine_datasets_val how2qa \
-    --how2qa_val_csv_path /mnt/hdd2/how2qa/frozenbilm/public_val_sanitized.csv \
-    --how2qa_features_path /mnt/ssd2/dataset/how2qa/diffrate/openai_clip-vit-large-patch14/p_257_256_252_244_241_237_233_230_225_222_220_200_155_105_81_65_60_56_52_50_49_48_33_5_m_257_253_247_241_240_235_231_228_223_222_216_181_122_87_65_62_56_54_50_49_48_47_25_5 \
+    --how2qa_val_csv_path /mnt/ssd2/dataset/how2qa/how2qa_frozenbilm_sanitized.csv \
     --how2qa_subtitles_path /mnt/hdd2/how2qa/frozenbilm/subtitles.pkl \
+    --how2qa_features_path /mnt/ssd2/dataset/how2qa/reuse/openai_clip-vit-large-patch14/how2qa/try46 \
     --save_dir=zsHow2QA \
     --ds_factor_ff=8 \
     --ds_factor_attn=8 \

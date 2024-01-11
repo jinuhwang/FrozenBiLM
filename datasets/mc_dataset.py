@@ -84,6 +84,10 @@ class MC_Dataset(Dataset):
 
         frame_features = []
         video_id = '_'.join(video_id.split('_')[:-2])
+        # We already applied it during sanitization
+        # time_base = int(video_id.split('_')[-2])
+        # start += time_base
+        # end += time_base
         for i in range(start, end):
             feature_path = self.features_dir / f'{video_id}_o_{i}.npz'
             try:
@@ -127,6 +131,10 @@ class MC_Dataset(Dataset):
         start = self.data["start"].values[idx]
         end = self.data["end"].values[idx]
 
+        time_base = int(video_id.split('_')[-2])
+        start_old = start - time_base
+        end_old = end - time_base
+
         # get question
         question = self.data["question"].values[idx].capitalize().strip()
         if question[-1] != "?":
@@ -137,7 +145,7 @@ class MC_Dataset(Dataset):
 
         # get subs
         if self.subs:
-            subs = self._get_subtitles(video_id, start, end)
+            subs = self._get_subtitles(video_id, start_old, end_old)
         else:
             subs = ""
 
@@ -157,7 +165,7 @@ class MC_Dataset(Dataset):
         qid = idx
         if "qid" in self.data:
             qid = int(self.data["qid"].values[idx])
-
+        
         return {
             "video": video,
             "video_len": video_len,

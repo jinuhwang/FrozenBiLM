@@ -3,15 +3,17 @@ import pandas as pd
 import pickle
 import torch
 from tqdm import tqdm
-from args import DATA_DIR
 
-id2vid = json.load(open(f"{DATA_DIR}/How2QA/how2_vid_mapping.json", "r"))
+DATA_DIR = "/mnt/ssd2/dataset/how2qa/annotations/how2qa"
+
+'''
+id2vid = json.load(open(f"{DATA_DIR}/how2_vid_mapping.json", "r"))
 
 # convert jsonlines to pickle for the subtitles
-with open(f"{DATA_DIR}/How2QA/subtitles.jsonl") as f:
+with open(f"{DATA_DIR}/subtitles.jsonl") as f:
     data = [json.loads(line) for line in f]
 subs = {x["vid_name"]: x["sub"] for x in data}
-pickle.dump(subs, open(f"{DATA_DIR}/How2QA/subtitles.pkl", "wb"))
+pickle.dump(subs, open(f"{DATA_DIR}/subtitles.pkl", "wb"))
 
 # convert video features extracted as one per YouTube video to one per video clip
 feats = torch.load(f"{DATA_DIR}/How2QA/clipvitl14.pth")
@@ -26,14 +28,16 @@ for x in tqdm(subs):
     else:
         print(x)
 print(len(new_feats), len(subs))
-torch.save(new_feats, f"{DATA_DIR}/How2QA/clipvitl14_split.pth")
+torch.save(new_feats, f"{DATA_DIR}/clipvitl14_split.pth")
+'''
 
 # get train
 splits = ["train"]
 for split in splits:
     with open(f"{DATA_DIR}/how2qa_{split}_release.jsonl") as f:
         data = [json.loads(line) for line in f]
-    video_id = [id2vid.get(x["vid_name"], x["vid_name"]) for x in data]
+    # video_id = [id2vid.get(x["vid_name"], x["vid_name"]) for x in data]
+    video_id = [x["vid_name"] for x in data]
     start = [float(x["ts"].split("-")[0]) for x in data]
     end = [float(x["ts"].split("-")[1]) for x in data]
     a0 = [
@@ -108,11 +112,11 @@ for split in splits:
             ],
         )
     print(len(df))
-    print(len(df[df["video_id"].isin(new_feats)]))
-    df.to_csv(f"{DATA_DIR}/How2QA/{split}.csv", index=False)
+    # print(len(df[df["video_id"].isin(new_feats)]))
+    df.to_csv(f"{DATA_DIR}/{split}.csv", index=False)
 
 # get public val
-df = pd.read_csv(f"{DATA_DIR}/How2QA/how2QA_val_release.csv")
+df = pd.read_csv(f"{DATA_DIR}/how2QA_val_release.csv")
 df.columns = ["vid_id", "timesteps", "a1", "a2", "a3", "question", "a0"]
 print(len(df))
 count = {}
@@ -180,4 +184,4 @@ val_df = pd.DataFrame(
 )
 print(len(val_df))
 print(val_df)
-val_df.to_csv(f"{DATA_DIR}/How2QA/public_val.csv", index=False)
+val_df.to_csv(f"{DATA_DIR}/public_val.csv", index=False)
