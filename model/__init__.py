@@ -10,7 +10,7 @@ from transformers import (
     GPT2Tokenizer,
 )
 
-CACHE_DIR='/workspace/data/cache'
+CACHE_DIR='/mnt/ssd1/cache'
 
 def build_model(args, cache_dir=CACHE_DIR):
     if "deberta" in args.model_name:
