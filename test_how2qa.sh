@@ -1,4 +1,4 @@
-##!/bin/bash
+#!/bin/bash
 
     # Original accuracy
     # --how2qa_features_path /mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14 \
@@ -12,16 +12,21 @@
     # Reues Only
     # --how2qa_features_path /mnt/ssd2/dataset/how2qa/reuse/openai_clip-vit-large-patch14/try23 \
 
+if [[ $# -ne 1 ]] ; then
+    echo 'Usage: test_how2qa.sh how2qa/tryXXX'
+    exit 1
+fi
+
+MODEL=$1
 TRANSFORMERS_CACHE=microsoft \
 python \
-    -m torch.distributed.launch --nproc_per_node 4 --use_env \
     mc.py \
     --test --eval \
     --combine_datasets how2qa \
     --combine_datasets_val how2qa \
     --how2qa_val_csv_path /mnt/ssd2/dataset/how2qa/how2qa_frozenbilm_sanitized.csv \
     --how2qa_subtitles_path /mnt/hdd2/how2qa/frozenbilm/subtitles.pkl \
-    --how2qa_features_path /mnt/ssd2/dataset/how2qa/reuse/openai_clip-vit-large-patch14/how2qa/try46 \
+    --how2qa_features_path /mnt/ssd2/dataset/how2qa/reuse/openai_clip-vit-large-patch14/${MODEL} \
     --save_dir=zsHow2QA \
     --ds_factor_ff=8 \
     --ds_factor_attn=8 \
