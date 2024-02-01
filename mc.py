@@ -21,6 +21,9 @@ from main import get_args_parser
 from util.misc import get_mask, adjust_learning_rate, mask_tokens
 from util.metrics import MetricLogger
 
+if '/workspace' not in sys.path:
+    sys.path.append('/workspace')
+
 
 def train_one_epoch(
     model: torch.nn.Module,
@@ -531,5 +534,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
+    if args.how2qa_model_name == 'original':
+        from vgenie.dataset.utils import get_feature_dir
+        args.how2qa_features_path = get_feature_dir(
+            "how2qa",
+            "openai/clip-vit-large-patch14",
+            1,
+            "frozenbilm"
+        )
+    else:
+        raise NotImplementedError
     args.model_name = os.path.join(os.environ["TRANSFORMERS_CACHE"], args.model_name)
     main(args)

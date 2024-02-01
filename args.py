@@ -184,7 +184,7 @@ def get_args_parser():
         default=os.path.join(DATA_DIR, name2folder["tgif"], "vocab.json"),
     )
     parser.add_argument(
-        "--how2qa_features_path",
+        "--how2qa_model_name",
         default=os.path.join(DATA_DIR, name2folder["how2qa"], "clipvitl14_split.pth"),
     )
     parser.add_argument(
