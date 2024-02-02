@@ -535,7 +535,7 @@ if __name__ == "__main__":
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
     if args.how2qa_model_name == 'original':
-        from vgenie.dataset.utils import get_feature_dir
+        from vgenie.utils.dataset import get_feature_dir
         args.how2qa_features_path = get_feature_dir(
             "how2qa",
             "openai/clip-vit-large-patch14",
