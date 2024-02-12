@@ -542,6 +542,15 @@ if __name__ == "__main__":
             1,
             "frozenbilm"
         )
+    elif 'diffrate-' in args.how2qa_model_name:
+        from vgenie.utils.diffrate import get_diffrate_feature_dir
+        args.how2qa_features_path = get_diffrate_feature_dir(
+            'how2qa',
+            'openai/clip-vit-large-patch14',
+            1,
+            'frozenbilm',
+            args.how2qa_model_name.replace('diffrate-', '')
+        )
     else:
         raise NotImplementedError
     args.model_name = os.path.join(os.environ["TRANSFORMERS_CACHE"], args.model_name)

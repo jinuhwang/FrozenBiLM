@@ -19,7 +19,7 @@ python \
     --suffix="." \
     --batch_size_val=32 \
     --max_tokens=512 \
-    --load=/workspace/data/frozenbilm/checkpoints/frozenbilm_how2qa.pth \
+    --load=/mnt/ssd1/data/how2qa/frozenbilm_how2qa.pth \
     --how2qa_model_name $1
 
 # Testing synthetic cosine similarity noise

@@ -15,7 +15,7 @@ import sys
 if '/workspace' not in sys.path:
     sys.path.insert(0, '/workspace')
 from vgenie.utils import add_noise_for_similarity, add_noise_for_mse
-from vgenie.dataset.utils import load_embedding
+from vgenie.utils import load_embedding
 
 
 class MC_Dataset(Dataset):
