@@ -531,6 +531,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         "Frozen training and evaluation script", parents=[get_args_parser()]
     )
+    parser.add_argument("--wrong_qids_csv_path", type=str, default=None)
     args = parser.parse_args()
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)

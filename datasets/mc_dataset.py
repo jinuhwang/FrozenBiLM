@@ -31,9 +31,12 @@ class MC_Dataset(Dataset):
         type_map=None,
         prefix="",
         suffix="",
+        wrong_qids_csv_path=None,
     ):
         self.data = pd.read_csv(csv_path)
         self.data.fillna({'a0': '', 'a1': '', 'a2': '', 'a3': '', 'a4': ''}, inplace=True)
+        if wrong_qids_csv_path is not None:
+            self.data = pd.read_csv(wrong_qids_csv_path)
 
         if subtitles_path:
             self.subs = pickle.load(open(subtitles_path, "rb"))
@@ -234,4 +237,5 @@ def build_mc_dataset(dataset_name, split, args, tokenizer):
         prefix=args.prefix,
         suffix=args.suffix,
         type_map=type_map,
+        wrong_qids_csv_path=args.wrong_qids_csv_path,
     )
