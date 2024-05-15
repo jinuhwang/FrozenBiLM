@@ -169,6 +169,7 @@ def evaluate(
             logits = output["logits"]
             # get logits for the mask token
             delay = args.max_feats if args.use_video else 0
+            delay = min(512 - encoded['input_ids'].size(1), delay)
             logits = logits[:, delay : encoded["input_ids"].size(1) + delay][
                 encoded["input_ids"] == tokenizer.mask_token_id
             ]

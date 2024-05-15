@@ -255,7 +255,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--batch_size_val",
-        default=32,
+        default=16,
         type=int,
         help="batch size used for eval",
     )

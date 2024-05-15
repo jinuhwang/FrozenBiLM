@@ -1465,13 +1465,16 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
                 )
                 labels = torch.cat([video_labels, labels], 1)
 
+        encoder_layers = list(h[:, -512:] for h in outputs['hidden_states'])
+        attention_mask = outputs['attention_mask'][:, -512:]
+
         # sequence_output = outputs[0]
         modified = self.emd_context_layer(
-            encoder_layers=outputs["hidden_states"],
+            encoder_layers=encoder_layers,
             z_states=outputs["position_embeddings"].repeat(
                 input_ids.shape[0] // len(outputs["position_embeddings"]), 1, 1
             ),
-            attention_mask=outputs["attention_mask"],
+            attention_mask=attention_mask,
             encoder=self.deberta.encoder,
         )
         bias = None

@@ -17,7 +17,6 @@ python \
     --ds_factor_ff=8 \
     --ds_factor_attn=8 \
     --suffix="." \
-    --batch_size_val=16 \
     --max_tokens=512 \
     --load=/mnt/ssd1/data/how2qa/frozenbilm_how2qa.pth \
      --print_freq 5 \
