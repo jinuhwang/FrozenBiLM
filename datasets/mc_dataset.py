@@ -57,7 +57,7 @@ class MC_Dataset(Dataset):
         self.prefix = prefix
         self.suffix = suffix
         self.fps = fps
-        self.max_feats = max_feats * fps
+        self.max_feats = max_feats
 
     def __len__(self):
         return len(self.data)
@@ -82,8 +82,8 @@ class MC_Dataset(Dataset):
 
     def _get_video(self, video_id, start, end):
         if start is not None and not math.isnan(start):
-            start = int(start) * self.fps
-            end = int(end) * self.fps
+            start = int(int(start) * self.fps)
+            end = int(int(end) * self.fps) 
         else:
             raise NotImplementedError
 

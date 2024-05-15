@@ -532,8 +532,11 @@ if __name__ == "__main__":
         "Frozen training and evaluation script", parents=[get_args_parser()]
     )
     parser.add_argument("--wrong_qids_csv_path", type=str, default=None)
-    parser.add_argument('--fps', type=int, default=1)
+    parser.add_argument('--fps', type=float, default=1)
     args = parser.parse_args()
+
+    args.max_feats = int(args.max_feats * args.fps)
+
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
     if args.how2qa_model_name == 'original':
