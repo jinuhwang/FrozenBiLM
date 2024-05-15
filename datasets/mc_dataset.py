@@ -32,11 +32,12 @@ class MC_Dataset(Dataset):
         prefix="",
         suffix="",
         wrong_qids_csv_path=None,
+        fps=1,
     ):
         self.data = pd.read_csv(csv_path)
-        self.data.fillna({'a0': '', 'a1': '', 'a2': '', 'a3': '', 'a4': ''}, inplace=True)
         if wrong_qids_csv_path is not None:
             self.data = pd.read_csv(wrong_qids_csv_path)
+        self.data.fillna({'a0': '', 'a1': '', 'a2': '', 'a3': '', 'a4': ''}, inplace=True)
 
         if subtitles_path:
             self.subs = pickle.load(open(subtitles_path, "rb"))
@@ -45,7 +46,6 @@ class MC_Dataset(Dataset):
         # self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
         # self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
         self.features_dir = Path(features_path) 
-        self.max_feats = max_feats
         self.features_dim = features_dim
         self.mask = tokenizer.mask_token if tokenizer is not None else None
         self.use_context = use_context
@@ -56,6 +56,8 @@ class MC_Dataset(Dataset):
         self.type_map = type_map
         self.prefix = prefix
         self.suffix = suffix
+        self.fps = fps
+        self.max_feats = max_feats * fps
 
     def __len__(self):
         return len(self.data)
@@ -80,8 +82,8 @@ class MC_Dataset(Dataset):
 
     def _get_video(self, video_id, start, end):
         if start is not None and not math.isnan(start):
-            start = int(start)
-            end = int(end)
+            start = int(start) * self.fps
+            end = int(end) * self.fps
         else:
             raise NotImplementedError
 
@@ -238,4 +240,5 @@ def build_mc_dataset(dataset_name, split, args, tokenizer):
         suffix=args.suffix,
         type_map=type_map,
         wrong_qids_csv_path=args.wrong_qids_csv_path,
+        fps=args.fps,
     )

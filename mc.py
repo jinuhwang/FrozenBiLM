@@ -532,6 +532,7 @@ if __name__ == "__main__":
         "Frozen training and evaluation script", parents=[get_args_parser()]
     )
     parser.add_argument("--wrong_qids_csv_path", type=str, default=None)
+    parser.add_argument('--fps', type=int, default=1)
     args = parser.parse_args()
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
@@ -540,7 +541,7 @@ if __name__ == "__main__":
         args.how2qa_features_path = get_feature_dir(
             "how2qa",
             "openai/clip-vit-large-patch14",
-            1,
+            args.fps,
             "frozenbilm"
         )
     elif 'diffrate-' in args.how2qa_model_name:
