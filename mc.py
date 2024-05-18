@@ -20,6 +20,8 @@ from model import build_model, get_tokenizer
 from main import get_args_parser
 from util.misc import get_mask, adjust_learning_rate, mask_tokens
 from util.metrics import MetricLogger
+from vgenie.utils import get_feature_dir, get_feature_dir_reuse, get_feature_dir_cmc, get_feature_dir_eventful, is_integer
+
 
 if '/workspace' not in sys.path:
     sys.path.append('/workspace')
@@ -538,15 +540,32 @@ if __name__ == "__main__":
 
     args.max_feats = int(args.max_feats * args.fps)
 
+    LARGE_MODEL_NAME = 'openai/clip-vit-large-patch14'
+
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
     if args.how2qa_model_name == 'original':
-        from vgenie.utils.dataset import get_feature_dir
         args.how2qa_features_path = get_feature_dir(
             "how2qa",
-            "openai/clip-vit-large-patch14",
+            LARGE_MODEL_NAME,
             args.fps,
             "frozenbilm"
+        )
+    elif args.how2qa_model_name == 'cmc':
+        args.feature_dir = get_feature_dir_cmc(
+            'how2qa',
+            LARGE_MODEL_NAME,
+            args.fps,
+            'frozenbilm',
+            threshold=args.cmc_threshold,
+        )
+    elif args.how2qa_model_name == 'eventful':
+        args.feature_dir = get_feature_dir_eventful(
+            'how2qa',
+            LARGE_MODEL_NAME,
+            args.fps,
+            'frozenbilm',
+            top_r=args.eventful_top_r,
         )
     elif 'diffrate-' in args.how2qa_model_name:
         from vgenie.utils.diffrate import get_diffrate_feature_dir
