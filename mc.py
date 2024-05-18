@@ -571,7 +571,7 @@ if __name__ == "__main__":
         from vgenie.utils.diffrate import get_diffrate_feature_dir
         args.how2qa_features_path = get_diffrate_feature_dir(
             'how2qa',
-            'openai/clip-vit-large-patch14',
+            LARGE_MODEL_NAME,
             1,
             'frozenbilm',
             args.how2qa_model_name.replace('diffrate-', '')
