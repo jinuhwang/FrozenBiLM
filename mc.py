@@ -540,21 +540,21 @@ if __name__ == "__main__":
 
     args.max_feats = int(args.max_feats * args.fps)
 
-    LARGE_MODEL_NAME = 'openai/clip-vit-large-patch14'
+    BASE_MODEL_NAME = 'openai/clip-vit-large-patch14'
 
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
     if args.how2qa_model_name == 'original':
         args.how2qa_features_path = get_feature_dir(
             "how2qa",
-            LARGE_MODEL_NAME,
+            BASE_MODEL_NAME,
             args.fps,
             "frozenbilm"
         )
     elif args.how2qa_model_name == 'cmc':
         args.feature_dir = get_feature_dir_cmc(
             'how2qa',
-            LARGE_MODEL_NAME,
+            BASE_MODEL_NAME,
             args.fps,
             'frozenbilm',
             threshold=args.cmc_threshold,
@@ -562,7 +562,7 @@ if __name__ == "__main__":
     elif args.how2qa_model_name == 'eventful':
         args.feature_dir = get_feature_dir_eventful(
             'how2qa',
-            LARGE_MODEL_NAME,
+            BASE_MODEL_NAME,
             args.fps,
             'frozenbilm',
             top_r=args.eventful_top_r,
@@ -571,7 +571,7 @@ if __name__ == "__main__":
         from vgenie.utils.diffrate import get_diffrate_feature_dir
         args.how2qa_features_path = get_diffrate_feature_dir(
             'how2qa',
-            LARGE_MODEL_NAME,
+            BASE_MODEL_NAME,
             1,
             'frozenbilm',
             args.how2qa_model_name.replace('diffrate-', '')
