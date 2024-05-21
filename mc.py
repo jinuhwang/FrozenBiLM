@@ -569,7 +569,7 @@ if __name__ == "__main__":
         )
     elif 'diffrate-' in args.how2qa_model_name:
         from vgenie.utils.diffrate import get_feature_dir_diffrate
-        diffrate_model_name = args.model_name.replace('diffrate-', 'original-')
+        diffrate_model_name = args.how2qa_model_name.replace('diffrate-', 'original-')
         args.how2qa_features_path = get_feature_dir_diffrate(
             'how2qa', 
             BASE_MODEL_NAME, 
