@@ -468,4 +468,25 @@ def get_args_parser():
         help="path to a video example for demo",
     )
 
+    # Reuse model arguments
+    parser.add_argument(
+        "--reuse_model_name",
+        type=str,
+        help="name of the reuse model, like how2qa/try201",
+    )
+    parser.add_argument(
+        "--is_inference_model",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--compute_interval",
+        default=None,
+        type=int,
+    )
+    parser.add_argument(
+        "--epoch",
+        default=None,
+        type=int,
+    )
+
     return parser

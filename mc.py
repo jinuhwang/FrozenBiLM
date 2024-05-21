@@ -503,6 +503,19 @@ def main(args):
             split="val" if (args.eval and not args.test) else "test",
         )
 
+        if args.reuse_model_name is not None:
+            if args.is_inference_model:
+                log_dir = f'/workspace/scripts/{args.reuse_model_name}/{"none" if args.epoch is None else args.epoch}/{"none" if args.compute_interval is None else args.compute_interval}/iaccuracy.json'
+            else:
+                log_dir = f'/workspace/scripts/{args.reuse_model_name}/{"none" if args.epoch is None else args.epoch}/{"none" if args.compute_interval is None else args.compute_interval}/taccuracy.json'
+            os.makedirs(os.path.dirname(log_dir), exist_ok=True)
+            with open(f'{log_dir}', 'w') as f:
+                json.dump({
+                    "results": results,
+                    "acc": float(acc)
+                }, f, indent=4)
+
+
         if args.save_dir and dist.is_main_process():
             json.dump(
                 results,
@@ -578,6 +591,21 @@ if __name__ == "__main__":
             args.fps, 
             'frozenbilm', 
             diffrate_model_name)
+    elif args.how2qa_model_name == 'reuse':
+        tfeature_dir, ifeature_dir = get_feature_dir_reuse(
+            'how2qa',
+            BASE_MODEL_NAME,
+            args.fps,
+            'frozenbilm',
+            args.reuse_model_name,
+            is_training_and_inference=True,
+            epoch=args.epoch,
+            compute_interval=args.compute_interval,
+        )
+        if args.is_inference_model:
+            args.how2qa_features_path = ifeature_dir
+        else:
+            args.how2qa_features_path = tfeature_dir
     else:
         raise NotImplementedError
     args.model_name = os.path.join(os.environ["TRANSFORMERS_CACHE"], args.model_name)
