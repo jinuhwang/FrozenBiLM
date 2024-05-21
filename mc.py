@@ -536,6 +536,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--wrong_qids_csv_path", type=str, default=None)
     parser.add_argument('--fps', type=float, default=1)
+    parser.add_argument("--cmc_threshold", default=1, type=int, help="Threshold for CMC")
+    parser.add_argument("--eventful_top_r", default=1, type=int, help="top r for eventful")
     args = parser.parse_args()
 
     args.max_feats = int(args.max_feats * args.fps)
@@ -552,7 +554,7 @@ if __name__ == "__main__":
             "frozenbilm"
         )
     elif args.how2qa_model_name == 'cmc':
-        args.feature_dir = get_feature_dir_cmc(
+        args.how2qa_features_path = get_feature_dir_cmc(
             'how2qa',
             BASE_MODEL_NAME,
             args.fps,
@@ -560,7 +562,7 @@ if __name__ == "__main__":
             threshold=args.cmc_threshold,
         )
     elif args.how2qa_model_name == 'eventful':
-        args.feature_dir = get_feature_dir_eventful(
+        args.how2qa_features_path = get_feature_dir_eventful(
             'how2qa',
             BASE_MODEL_NAME,
             args.fps,
