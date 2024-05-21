@@ -6,7 +6,7 @@ if [ $# -lt 1 ]; then
 fi
 
 TRANSFORMERS_CACHE=microsoft \
-python \
+/opt/conda/bin/python3.8 \
     mc.py \
     --test --eval \
     --combine_datasets how2qa \

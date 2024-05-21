@@ -568,14 +568,14 @@ if __name__ == "__main__":
             top_r=args.eventful_top_r,
         )
     elif 'diffrate-' in args.how2qa_model_name:
-        from vgenie.utils.diffrate import get_diffrate_feature_dir
-        args.how2qa_features_path = get_diffrate_feature_dir(
-            'how2qa',
-            BASE_MODEL_NAME,
-            1,
-            'frozenbilm',
-            args.how2qa_model_name.replace('diffrate-', '')
-        )
+        from vgenie.utils.diffrate import get_feature_dir_diffrate
+        diffrate_model_name = args.model_name.replace('diffrate-', 'original-')
+        args.how2qa_features_path = get_feature_dir_diffrate(
+            'how2qa', 
+            BASE_MODEL_NAME, 
+            args.fps, 
+            'frozenbilm', 
+            diffrate_model_name)
     else:
         raise NotImplementedError
     args.model_name = os.path.join(os.environ["TRANSFORMERS_CACHE"], args.model_name)
