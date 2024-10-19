@@ -501,6 +501,7 @@ class DebertaV2Encoder(nn.Module):
                 hidden_states.size(-2),
                 bucket_size=self.position_buckets,
                 max_position=self.max_relative_positions,
+                device=hidden_states.device,
             )
         return relative_pos
 
@@ -576,20 +577,21 @@ class DebertaV2Encoder(nn.Module):
 
 
 def make_log_bucket_position(relative_pos, bucket_size, max_position):
-    sign = np.sign(relative_pos)
+    sign = torch.sign(relative_pos)
     mid = bucket_size // 2
-    abs_pos = np.where(
-        (relative_pos < mid) & (relative_pos > -mid), mid - 1, np.abs(relative_pos)
+    abs_pos = torch.where(
+        (relative_pos < mid) & (relative_pos > -mid),
+        torch.tensor(mid - 1).type_as(relative_pos),
+        torch.abs(relative_pos),
     )
     log_pos = (
-        np.ceil(np.log(abs_pos / mid) / np.log((max_position - 1) / mid) * (mid - 1))
-        + mid
+        torch.ceil(torch.log(abs_pos / mid) / torch.log(torch.tensor((max_position - 1) / mid)) * (mid - 1)) + mid
     )
-    bucket_pos = np.where(abs_pos <= mid, relative_pos, log_pos * sign).astype(np.int)
+    bucket_pos = torch.where(abs_pos <= mid, relative_pos.type_as(log_pos), log_pos * sign)
     return bucket_pos
 
 
-def build_relative_position(query_size, key_size, bucket_size=-1, max_position=-1):
+def build_relative_position(query_size, key_size, bucket_size=-1, max_position=-1, device=None):
     """
     Build relative position according to the query and key
 
@@ -607,12 +609,12 @@ def build_relative_position(query_size, key_size, bucket_size=-1, max_position=-
         :obj:`torch.LongTensor`: A tensor with shape [1, query_size, key_size]
 
     """
-    q_ids = np.arange(0, query_size)
-    k_ids = np.arange(0, key_size)
-    rel_pos_ids = q_ids[:, None] - np.tile(k_ids, (q_ids.shape[0], 1))
+    q_ids = torch.arange(0, query_size, device=device)
+    k_ids = torch.arange(0, key_size, device=device)
+    rel_pos_ids = q_ids[:, None] - k_ids[None, :]
     if bucket_size > 0 and max_position > 0:
         rel_pos_ids = make_log_bucket_position(rel_pos_ids, bucket_size, max_position)
-    rel_pos_ids = torch.tensor(rel_pos_ids, dtype=torch.long)
+    rel_pos_ids = rel_pos_ids.to(torch.long)
     rel_pos_ids = rel_pos_ids[:query_size, :]
     rel_pos_ids = rel_pos_ids.unsqueeze(0)
     return rel_pos_ids
@@ -773,7 +775,7 @@ class DisentangledSelfAttention(nn.Module):
             scale_factor += 1
         if "p2p" in self.pos_att_type:
             scale_factor += 1
-        scale = math.sqrt(query_layer.size(-1) * scale_factor)
+        scale = torch.sqrt(torch.tensor(query_layer.size(-1), dtype=torch.float) * scale_factor)
         attention_scores = torch.bmm(query_layer, key_layer.transpose(-1, -2)) / scale
         if self.relative_attention:
             rel_embeddings = self.pos_dropout(rel_embeddings)
@@ -827,6 +829,7 @@ class DisentangledSelfAttention(nn.Module):
                 key_layer.size(-2),
                 bucket_size=self.position_buckets,
                 max_position=self.max_relative_positions,
+                device=query_layer.device,
             )
         if relative_pos.dim() == 2:
             relative_pos = relative_pos.unsqueeze(0).unsqueeze(0)
@@ -868,7 +871,7 @@ class DisentangledSelfAttention(nn.Module):
         score = 0
         # content->position
         if "c2p" in self.pos_att_type:
-            scale = math.sqrt(pos_key_layer.size(-1) * scale_factor)
+            scale = torch.sqrt(torch.tensor(pos_key_layer.size(-1), dtype=torch.float) * scale_factor)
             c2p_att = torch.bmm(query_layer, pos_key_layer.transpose(-1, -2))
             c2p_pos = torch.clamp(relative_pos + att_span, 0, att_span * 2 - 1)
             c2p_att = torch.gather(
@@ -882,13 +885,14 @@ class DisentangledSelfAttention(nn.Module):
 
         # position->content
         if "p2c" in self.pos_att_type or "p2p" in self.pos_att_type:
-            scale = math.sqrt(pos_query_layer.size(-1) * scale_factor)
+            scale = torch.sqrt(torch.tensor(pos_query_layer.size(-1), dtype=torch.float) * scale_factor)
             if key_layer.size(-2) != query_layer.size(-2):
                 r_pos = build_relative_position(
                     key_layer.size(-2),
                     key_layer.size(-2),
                     bucket_size=self.position_buckets,
                     max_position=self.max_relative_positions,
+                    device=query_layer.device,
                 ).to(query_layer.device)
                 r_pos = r_pos.unsqueeze(0)
             else:
@@ -1382,8 +1386,8 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
     def emd_context_layer(self, encoder_layers, z_states, attention_mask, encoder):
         if attention_mask.dim() <= 2:
             extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
-            att_mask = extended_attention_mask.byte()
-            attention_mask = att_mask * att_mask.squeeze(-2).unsqueeze(-1)
+            attention_mask = extended_attention_mask * extended_attention_mask.squeeze(-2).unsqueeze(-1)
+            attention_mask = attention_mask.byte()
         elif attention_mask.dim() == 3:
             attention_mask = attention_mask.unsqueeze(1)
         hidden_states = encoder_layers[-2]
@@ -1413,6 +1417,8 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
 
     def forward(
         self,
+        video=None,
+        video_mask=None,
         input_ids=None,
         attention_mask=None,
         token_type_ids=None,
@@ -1421,8 +1427,6 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
         labels=None,
         output_attentions=None,
         return_dict=None,
-        video=None,
-        video_mask=None,
         mlm=False,
     ):
         r"""
@@ -1461,13 +1465,16 @@ class DebertaV2ForMaskedLM(DebertaV2PreTrainedModel):
                 )
                 labels = torch.cat([video_labels, labels], 1)
 
+        encoder_layers = list(h[:, -512:] for h in outputs['hidden_states'])
+        attention_mask = outputs['attention_mask'][:, -512:]
+
         # sequence_output = outputs[0]
         modified = self.emd_context_layer(
-            encoder_layers=outputs["hidden_states"],
+            encoder_layers=encoder_layers,
             z_states=outputs["position_embeddings"].repeat(
                 input_ids.shape[0] // len(outputs["position_embeddings"]), 1, 1
             ),
-            attention_mask=outputs["attention_mask"],
+            attention_mask=attention_mask,
             encoder=self.deberta.encoder,
         )
         bias = None

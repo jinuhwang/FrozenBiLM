@@ -10,12 +10,13 @@ from transformers import (
     GPT2Tokenizer,
 )
 
+CACHE_DIR='/mnt/ssd1/cache'
 
-def build_model(args):
+def build_model(args, cache_dir=CACHE_DIR):
     if "deberta" in args.model_name:
         if args.scratch:
             config = DebertaV2Config.from_pretrained(
-                pretrained_model_name_or_path=args.model_name, local_files_only=True
+                pretrained_model_name_or_path=args.model_name, cache_dir=cache_dir
             )
             model = DebertaV2ForMaskedLM(
                 features_dim=args.features_dim if args.use_video else 0,
@@ -43,7 +44,7 @@ def build_model(args):
                 n_ans=args.n_ans,
                 freeze_last=args.freeze_last,
                 pretrained_model_name_or_path=args.model_name,
-                local_files_only=True,
+                cache_dir=cache_dir,
             )
     elif "bert" in args.model_name:
         assert (
@@ -91,10 +92,10 @@ def build_model(args):
     return model
 
 
-def get_tokenizer(args):
+def get_tokenizer(args, cache_dir=CACHE_DIR):
     if "deberta" in args.model_name:
         tokenizer = DebertaV2Tokenizer.from_pretrained(
-            args.model_name, local_files_only=True
+            args.model_name, cache_dir=cache_dir
         )
     elif "bert" in args.model_name:
         tokenizer = BertTokenizer.from_pretrained(

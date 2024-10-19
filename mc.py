@@ -20,6 +20,11 @@ from model import build_model, get_tokenizer
 from main import get_args_parser
 from util.misc import get_mask, adjust_learning_rate, mask_tokens
 from util.metrics import MetricLogger
+from dejavu.utils import get_feature_dir, get_feature_dir_reuse, get_feature_dir_cmc, get_feature_dir_eventful, is_integer
+
+
+if '/workspace' not in sys.path:
+    sys.path.append('/workspace')
 
 
 def train_one_epoch(
@@ -166,6 +171,7 @@ def evaluate(
             logits = output["logits"]
             # get logits for the mask token
             delay = args.max_feats if args.use_video else 0
+            delay = min(512 - encoded['input_ids'].size(1), delay)
             logits = logits[:, delay : encoded["input_ids"].size(1) + delay][
                 encoded["input_ids"] == tokenizer.mask_token_id
             ]
@@ -497,6 +503,19 @@ def main(args):
             split="val" if (args.eval and not args.test) else "test",
         )
 
+        if args.reuse_model_name is not None:
+            if args.is_inference_model:
+                log_dir = f'/workspace/scripts/{args.reuse_model_name}/{"none" if args.epoch is None else args.epoch}/{"none" if args.compute_interval is None else args.compute_interval}/iaccuracy.json'
+            else:
+                log_dir = f'/workspace/scripts/{args.reuse_model_name}/{"none" if args.epoch is None else args.epoch}/{"none" if args.compute_interval is None else args.compute_interval}/taccuracy.json'
+            os.makedirs(os.path.dirname(log_dir), exist_ok=True)
+            with open(f'{log_dir}', 'w') as f:
+                json.dump({
+                    "results": results,
+                    "acc": float(acc)
+                }, f, indent=4)
+
+
         if args.save_dir and dist.is_main_process():
             json.dump(
                 results,
@@ -528,8 +547,66 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         "Frozen training and evaluation script", parents=[get_args_parser()]
     )
+    parser.add_argument("--wrong_qids_csv_path", type=str, default=None)
+    parser.add_argument('--fps', type=float, default=1)
+    parser.add_argument("--cmc_threshold", default=1, type=int, help="Threshold for CMC")
+    parser.add_argument("--eventful_top_r", default=1, type=int, help="top r for eventful")
     args = parser.parse_args()
+
+    args.max_feats = int(args.max_feats * args.fps)
+
+    BASE_MODEL_NAME = 'openai/clip-vit-large-patch14'
+
     if args.save_dir:
         args.save_dir = os.path.join(args.presave_dir, args.save_dir)
+    if args.how2qa_model_name == 'original':
+        args.how2qa_features_path = get_feature_dir(
+            "how2qa",
+            BASE_MODEL_NAME,
+            args.fps,
+            "frozenbilm"
+        )
+    elif args.how2qa_model_name == 'cmc':
+        args.how2qa_features_path = get_feature_dir_cmc(
+            'how2qa',
+            BASE_MODEL_NAME,
+            args.fps,
+            'frozenbilm',
+            threshold=args.cmc_threshold,
+        )
+    elif args.how2qa_model_name == 'eventful':
+        args.how2qa_features_path = get_feature_dir_eventful(
+            'how2qa',
+            BASE_MODEL_NAME,
+            args.fps,
+            'frozenbilm',
+            top_r=args.eventful_top_r,
+        )
+    elif 'diffrate-' in args.how2qa_model_name:
+        from dejavu.utils.diffrate import get_feature_dir_diffrate
+        diffrate_model_name = args.how2qa_model_name.replace('diffrate-', 'original-')
+        args.how2qa_features_path = get_feature_dir_diffrate(
+            'how2qa', 
+            BASE_MODEL_NAME, 
+            args.fps, 
+            'frozenbilm', 
+            diffrate_model_name)
+    elif args.how2qa_model_name == 'reuse':
+        tfeature_dir, ifeature_dir = get_feature_dir_reuse(
+            'how2qa',
+            BASE_MODEL_NAME,
+            args.fps,
+            'frozenbilm',
+            args.reuse_model_name,
+            is_training_and_inference=True,
+            epoch=args.epoch,
+            compute_interval=args.compute_interval,
+        )
+        if args.is_inference_model:
+            args.how2qa_features_path = ifeature_dir
+        else:
+            args.how2qa_features_path = tfeature_dir
+    else:
+        raise NotImplementedError
     args.model_name = os.path.join(os.environ["TRANSFORMERS_CACHE"], args.model_name)
     main(args)

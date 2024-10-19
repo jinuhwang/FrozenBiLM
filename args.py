@@ -184,7 +184,7 @@ def get_args_parser():
         default=os.path.join(DATA_DIR, name2folder["tgif"], "vocab.json"),
     )
     parser.add_argument(
-        "--how2qa_features_path",
+        "--how2qa_model_name",
         default=os.path.join(DATA_DIR, name2folder["how2qa"], "clipvitl14_split.pth"),
     )
     parser.add_argument(
@@ -255,7 +255,7 @@ def get_args_parser():
     )
     parser.add_argument(
         "--batch_size_val",
-        default=32,
+        default=16,
         type=int,
         help="batch size used for eval",
     )
@@ -466,6 +466,27 @@ def get_args_parser():
         default="",
         type=str,
         help="path to a video example for demo",
+    )
+
+    # Reuse model arguments
+    parser.add_argument(
+        "--reuse_model_name",
+        type=str,
+        help="name of the reuse model, like how2qa/try201",
+    )
+    parser.add_argument(
+        "--is_inference_model",
+        action="store_true",
+    )
+    parser.add_argument(
+        "--compute_interval",
+        default=None,
+        type=int,
+    )
+    parser.add_argument(
+        "--epoch",
+        default=None,
+        type=int,
     )
 
     return parser

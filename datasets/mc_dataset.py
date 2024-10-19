@@ -4,6 +4,18 @@ from torch.utils.data.dataloader import default_collate
 import pandas as pd
 import pickle
 import math
+from pathlib import Path
+import numpy as np
+import os
+
+import torch
+import time
+
+import sys
+if '/workspace' not in sys.path:
+    sys.path.insert(0, '/workspace')
+from dejavu.utils import add_noise_for_similarity, add_noise_for_mse
+from dejavu.utils import load_embedding
 
 
 class MC_Dataset(Dataset):
@@ -19,14 +31,21 @@ class MC_Dataset(Dataset):
         type_map=None,
         prefix="",
         suffix="",
+        wrong_qids_csv_path=None,
+        fps=1,
     ):
         self.data = pd.read_csv(csv_path)
+        if wrong_qids_csv_path is not None:
+            self.data = pd.read_csv(wrong_qids_csv_path)
+        self.data.fillna({'a0': '', 'a1': '', 'a2': '', 'a3': '', 'a4': ''}, inplace=True)
+
         if subtitles_path:
             self.subs = pickle.load(open(subtitles_path, "rb"))
         else:
             self.subs = None
-        self.features = th.load(features_path)
-        self.max_feats = max_feats
+        # self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
+        # self.features_dir = Path('/mnt/ssd2/dataset/how2qa/openai_clip-vit-large-patch14') 
+        self.features_dir = Path(features_path) 
         self.features_dim = features_dim
         self.mask = tokenizer.mask_token if tokenizer is not None else None
         self.use_context = use_context
@@ -37,6 +56,8 @@ class MC_Dataset(Dataset):
         self.type_map = type_map
         self.prefix = prefix
         self.suffix = suffix
+        self.fps = fps
+        self.max_feats = max_feats
 
     def __len__(self):
         return len(self.data)
@@ -60,30 +81,51 @@ class MC_Dataset(Dataset):
         return text
 
     def _get_video(self, video_id, start, end):
-        if video_id not in self.features:
-            print(video_id)
-            video = th.zeros(1, self.features_dim)
+        if start is not None and not math.isnan(start):
+            start = int(int(start) * self.fps)
+            end = int(int(end) * self.fps) 
         else:
-            if start is not None and not math.isnan(start):
-                video = self.features[video_id][int(start) : int(end) + 1].float()
-            else:
-                video = self.features[video_id].float()
-            if not len(video):
-                print(video_id, start, end)
-                video = th.zeros(1, self.features_dim)
-        if len(video) > self.max_feats:
-            sampled = []
+            raise NotImplementedError
+
+        frame_features = []
+        video_id = '_'.join(video_id.split('_')[:-2])
+        # We already applied it during sanitization
+        # time_base = int(video_id.split('_')[-2])
+        # start += time_base
+        # end += time_base
+        for i in range(start, end):
+            feature_path = self.features_dir / f'{video_id}_o_{i}.npz'
+            try:
+                features = load_embedding(feature_path, return_pt=True)
+                # For noise injection
+                noise_level = os.environ.get('INJECT_NOISE', None)
+                if noise_level is not None:
+                    noise_level = float(noise_level)
+                    if os.environ.get('INJECT_NOISE_MSE', None) is not None:
+                        features = add_noise_for_mse(features, noise_level)
+                    else:
+                        features = add_noise_for_similarity(features, noise_level)
+                frame_features.append(features)
+            except Exception as e:
+                print(f'Feature {feature_path} not loaded, needed ({start}, {end}): {e}')
+                break
+
+        if len(frame_features) > self.max_feats:
+            # sample frames
+            # frame_idxs = np.linspace(0, len(frame_features) - 1, self.max_feats)
+            # frame_idxs = np.round(frame_idxs).astype(int)
+            # frame_features = [frame_features[i] for i in frame_idxs]
+            step = len(frame_features) // self.max_feats
+            tmp = []
             for j in range(self.max_feats):
-                sampled.append(video[(j * len(video)) // self.max_feats])
-            video = th.stack(sampled)
-            video_len = self.max_feats
-        elif len(video) < self.max_feats:
-            video_len = len(video)
-            video = th.cat(
-                [video, th.zeros(self.max_feats - video_len, self.features_dim)], 0
-            )
-        else:
-            video_len = self.max_feats
+                tmp.append(frame_features[j * step])
+            frame_features = tmp
+
+        video_len = len(frame_features)
+        for i in range(video_len, self.max_feats):
+            # Fill the rest with zeros
+            frame_features.append(th.zeros(self.features_dim))
+        video = th.stack(frame_features)
 
         return video, video_len
 
@@ -93,6 +135,10 @@ class MC_Dataset(Dataset):
         # get start, end
         start = self.data["start"].values[idx]
         end = self.data["end"].values[idx]
+
+        time_base = int(video_id.split('_')[-2])
+        start_old = start - time_base
+        end_old = end - time_base
 
         # get question
         question = self.data["question"].values[idx].capitalize().strip()
@@ -104,7 +150,7 @@ class MC_Dataset(Dataset):
 
         # get subs
         if self.subs:
-            subs = self._get_subtitles(video_id, start, end)
+            subs = self._get_subtitles(video_id, start_old, end_old)
         else:
             subs = ""
 
@@ -124,7 +170,7 @@ class MC_Dataset(Dataset):
         qid = idx
         if "qid" in self.data:
             qid = int(self.data["qid"].values[idx])
-
+        
         return {
             "video": video,
             "video_len": video_len,
@@ -193,4 +239,6 @@ def build_mc_dataset(dataset_name, split, args, tokenizer):
         prefix=args.prefix,
         suffix=args.suffix,
         type_map=type_map,
+        wrong_qids_csv_path=args.wrong_qids_csv_path,
+        fps=args.fps,
     )

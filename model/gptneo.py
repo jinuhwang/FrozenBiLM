@@ -37,7 +37,7 @@ from transformers import GPTNeoConfig
 
 from transformers import LogitsProcessorList, StoppingCriteriaList
 from transformers import Constraint
-from transformers.generation_utils import (
+from transformers.generation.utils import (
     GreedySearchOutput,
     SampleOutput,
     BeamSearchOutput,
@@ -46,7 +46,7 @@ from transformers.generation_utils import (
     GreedySearchDecoderOnlyOutput,
     validate_stopping_criteria,
 )
-from transformers.generation_beam_search import (
+from transformers.generation.beam_search import (
     BeamScorer,
     BeamSearchScorer,
     ConstrainedBeamSearchScorer,
